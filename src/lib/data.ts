@@ -1,4 +1,12 @@
-import { HeartPulse, Bone, Stethoscope } from 'lucide-react';
+'use client';
+import {
+  HeartPulse,
+  Bone,
+  Stethoscope,
+  Baby,
+  Brain,
+  Ear,
+} from 'lucide-react';
 import type { Department, Hospital } from '@/lib/types';
 
 export const hospitals: Hospital[] = [
@@ -26,5 +34,26 @@ export const departments: Department[] = [
     icon: Stethoscope,
     doctor: 'Dr. Sarah Lee',
     avgConsultationTime: 15,
+  },
+  {
+    id: 'pediatrics',
+    name: 'Pediatrics',
+    icon: Baby,
+    doctor: 'Dr. Michael Chen',
+    avgConsultationTime: 18,
+  },
+  {
+    id: 'neurology',
+    name: 'Neurology',
+    icon: Brain,
+    doctor: 'Dr. Jessica Taylor',
+    avgConsultationTime: 30,
+  },
+  {
+    id: 'ent',
+    name: 'ENT',
+    icon: Ear,
+    doctor: 'Dr. David Wilson',
+    avgConsultationTime: 12,
   },
 ];

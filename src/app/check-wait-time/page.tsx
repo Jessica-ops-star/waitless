@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Clock, AlertTriangle, Lightbulb, Users, CheckCircle } from 'lucide-react';
+import { Clock, Lightbulb, Users, CheckCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -59,7 +59,7 @@ export default function CheckWaitTimePage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      hospital: '',
+      hospital: 'city-general',
       department: '',
     },
   });
@@ -149,7 +149,7 @@ export default function CheckWaitTimePage() {
                         </FormControl>
                         <SelectContent>
                           {hospitals.map((hospital) => (
-                            <SelectItem key={hospital.id} value={hospital.name}>
+                            <SelectItem key={hospital.id} value={hospital.id}>
                               {hospital.name}
                             </SelectItem>
                           ))}
@@ -191,7 +191,7 @@ export default function CheckWaitTimePage() {
                 />
               </div>
               <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? 'Predicting...' : 'Predict Wait Time'}
+                {isLoading ? 'Predicting...' : 'View Live Waiting Time'}
               </Button>
             </form>
           </Form>
@@ -203,13 +203,17 @@ export default function CheckWaitTimePage() {
       {prediction && selectedDepartment && (
         <Card className="mt-8 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <selectedDepartment.icon className="h-8 w-8 text-primary" />
-              {selectedDepartment.name}
-            </CardTitle>
-            <CardDescription>
-              Prediction results for {selectedDepartment.doctor}
-            </CardDescription>
+            <div className="flex items-center gap-4">
+               <selectedDepartment.icon className="h-10 w-10 text-primary" />
+                <div>
+                    <CardTitle className="flex items-center gap-2 text-2xl">
+                    {selectedDepartment.name}
+                    </CardTitle>
+                    <CardDescription>
+                    {selectedDepartment.doctor}
+                    </CardDescription>
+                </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -217,7 +221,7 @@ export default function CheckWaitTimePage() {
                 <Clock className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Estimated Wait Time
+                    Predicted Waiting Time
                   </p>
                   <p className="text-2xl font-bold">
                     {prediction.estimatedWaitTimeMinutes} mins
@@ -254,15 +258,20 @@ export default function CheckWaitTimePage() {
                   <div className="flex items-start gap-3">
                     <Lightbulb className="h-6 w-6 flex-shrink-0 text-yellow-600" />
                     <div className="flex-1">
-                      <h4 className="font-bold">Smart Suggestion</h4>
+                      <h4 className="font-bold">High crowd detected. Better time available.</h4>
                       <p className="mt-1">{prediction.reasoning}</p>
                       <div className="mt-4 flex flex-col gap-2 rounded-md bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
                         <p className="font-semibold">
-                          Visit at{' '}
+                          Suggested Slot: {' '}
                           <span className="text-primary">
                             {prediction.suggestedVisitTime}
                           </span>
                         </p>
+                         <p className="text-sm text-muted-foreground">
+                          Expected wait: {prediction.estimatedWaitTimeMinutes} mins
+                        </p>
+                        </div>
                         <Button
                           size="sm"
                           onClick={() =>
@@ -273,6 +282,7 @@ export default function CheckWaitTimePage() {
                             )
                           }
                         >
+                          <CheckCircle className="mr-2 h-4 w-4"/>
                           Book Suggested Slot
                         </Button>
                       </div>
@@ -299,7 +309,7 @@ export default function CheckWaitTimePage() {
                   )
                 }
               >
-                Continue & Book
+                Continue Anyway
               </Button>
             </div>
           </CardContent>

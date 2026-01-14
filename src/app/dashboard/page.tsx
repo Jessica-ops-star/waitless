@@ -3,9 +3,11 @@
 import { useQueue } from '@/context/QueueContext';
 import { departments } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Clock } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Users, Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Department } from '@/lib/types';
+import { useMemo } from 'react';
 
 function getStatus(queueLength: number): {
   label: 'Low' | 'Medium' | 'High';
@@ -19,7 +21,7 @@ function getStatus(queueLength: number): {
       indicator: 'bg-green-500',
     };
   }
-  if (queueLength <= 20) {
+  if (queueLength <= 18) {
     return {
       label: 'Medium',
       color: 'text-yellow-600',
@@ -68,7 +70,7 @@ const DepartmentCard = ({
         </span>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center space-x-4 text-sm">
+        <div className="flex items-center space-x-4">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" />
             <span className="font-bold text-2xl">{queueLength}</span>
@@ -86,6 +88,10 @@ const DepartmentCard = ({
 
 export default function DashboardPage() {
   const { queues } = useQueue();
+  
+  const overloadedDepartment = useMemo(() => {
+    return departments.find(dept => (queues[dept.id] || 0) > 18);
+  }, [queues]);
 
   return (
     <div className="container mx-auto py-10">
@@ -97,6 +103,16 @@ export default function DashboardPage() {
           Real-time overview of patient flow and department load.
         </p>
       </div>
+
+      {overloadedDepartment && (
+        <Alert variant="destructive" className="mb-8">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{overloadedDepartment.name} delay exceeds safe limit</AlertTitle>
+          <AlertDescription>
+            Redirect new patients to General Medicine.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {departments.map((dept) => (

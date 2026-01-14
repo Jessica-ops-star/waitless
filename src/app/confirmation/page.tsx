@@ -20,12 +20,12 @@ function ConfirmationContent() {
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
           <CardTitle className="mt-4 text-3xl font-headline">
-            Appointment Confirmed!
+            Slot booked successfully!
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-lg text-muted-foreground">
-            Your spot is reserved. Please arrive on time.
+            Please arrive 10 minutes early.
           </p>
           <div className="rounded-lg border bg-secondary p-4 text-left">
             <div className="space-y-2">
@@ -43,15 +43,9 @@ function ConfirmationContent() {
               </div>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            A reminder has been sent to your registered contact details (for demo purposes).
-          </p>
           <div className="flex justify-center space-x-4">
             <Button asChild>
               <Link href="/">Back to Home</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/check-wait-time">Check Another</Link>
             </Button>
           </div>
         </CardContent>
