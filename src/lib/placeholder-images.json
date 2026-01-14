@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-background",
+      "description": "A calm and modern hospital waiting room.",
+      "imageUrl": "https://images.unsplash.com/photo-1495658013006-a2069f54d3d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxob3NwaXRhbCUyMHdhaXRpbmclMjByb29tfGVufDB8fHx8MTc2ODM2NzY3NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hospital waiting room"
+    }
+  ]
 }
