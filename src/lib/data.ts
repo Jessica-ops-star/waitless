@@ -1,3 +1,4 @@
+
 'use client';
 import {
   HeartPulse,
@@ -6,6 +7,9 @@ import {
   Baby,
   Brain,
   Ear,
+  ShieldPlus,
+  Pyramid,
+  Waves,
 } from 'lucide-react';
 import type { Department, Hospital } from '@/lib/types';
 
@@ -25,8 +29,8 @@ export const departments: Department[] = [
     id: 'orthopedics',
     name: 'Orthopedics',
     icon: Bone,
-    doctor: 'Dr. James Rodriguez',
-    avgConsultationTime: 25,
+    doctor: 'Dr. Mehta',
+    avgConsultationTime: 12,
   },
   {
     id: 'general-medicine',
@@ -55,5 +59,26 @@ export const departments: Department[] = [
     icon: Ear,
     doctor: 'Dr. David Wilson',
     avgConsultationTime: 12,
+  },
+  {
+    id: 'dermatology',
+    name: 'Dermatology',
+    icon: Pyramid,
+    doctor: 'Dr. Olivia Brown',
+    avgConsultationTime: 15
+  },
+  {
+    id: 'urology',
+    name: 'Urology',
+    icon: Waves,
+    doctor: 'Dr. Robert Davis',
+    avgConsultationTime: 22
+  },
+  {
+    id: 'oncology',
+    name: 'Oncology',
+    icon: ShieldPlus,
+    doctor: 'Dr. Sophia Miller',
+    avgConsultationTime: 35
   },
 ];

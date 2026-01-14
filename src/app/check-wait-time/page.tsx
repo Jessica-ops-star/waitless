@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Clock, Lightbulb, Users, CheckCircle } from 'lucide-react';
+import { Clock, Lightbulb, Users, CheckCircle, Hourglass } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -32,9 +33,10 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getWaitTimePrediction } from '@/lib/actions';
+import { getWaitTimePrediction, getOptimalVisitTime } from '@/lib/actions';
 import { hospitals, departments } from '@/lib/data';
 import type { PredictDepartmentWaitingTimeOutput } from '@/ai/flows/predict-department-waiting-time';
+import type { SuggestOptimalVisitTimeOutput } from '@/ai/flows/suggest-optimal-visit-time';
 import { useQueue } from '@/context/QueueContext';
 import { cn } from '@/lib/utils';
 import type { Department } from '@/lib/types';
@@ -49,12 +51,15 @@ type FormValues = z.infer<typeof formSchema>;
 export default function CheckWaitTimePage() {
   const [prediction, setPrediction] =
     useState<PredictDepartmentWaitingTimeOutput | null>(null);
+  const [suggestion, setSuggestion] =
+    useState<SuggestOptimalVisitTimeOutput | null>(null);
   const [selectedDepartment, setSelectedDepartment] =
     useState<Department | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggestionLoading, setIsSuggestionLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const { bookAppointment } = useQueue();
+  const { bookAppointment, getDepartmentQueue } = useQueue();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -67,9 +72,14 @@ export default function CheckWaitTimePage() {
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     setPrediction(null);
-    setSelectedDepartment(
-      departments.find((d) => d.id === values.department) || null
-    );
+    setSuggestion(null);
+    const department = departments.find((d) => d.id === values.department) || null;
+    setSelectedDepartment(department);
+
+    if (!department) {
+        setIsLoading(false);
+        return;
+    }
 
     try {
       const currentTime = new Date().toLocaleTimeString('en-US', {
@@ -79,10 +89,23 @@ export default function CheckWaitTimePage() {
       });
       const result = await getWaitTimePrediction(
         values.hospital,
-        values.department,
+        department.name,
         currentTime
       );
       setPrediction(result);
+
+      if (result.queueStatus === 'High') {
+        setIsSuggestionLoading(true);
+        const suggestionResult = await getOptimalVisitTime(
+          values.hospital,
+          department.name,
+          result.estimatedWaitTimeMinutes,
+          currentTime
+        );
+        setSuggestion(suggestionResult);
+        setIsSuggestionLoading(false);
+      }
+
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -166,7 +189,11 @@ export default function CheckWaitTimePage() {
                     <FormItem>
                       <FormLabel>Department</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                            field.onChange(value);
+                            setPrediction(null);
+                            setSuggestion(null);
+                        }}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -190,8 +217,8 @@ export default function CheckWaitTimePage() {
                   )}
                 />
               </div>
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? 'Predicting...' : 'View Live Waiting Time'}
+              <Button type="submit" disabled={isLoading || !form.getValues().department} className="w-full">
+                {isLoading ? 'Predicting...' : 'Check Waiting Time'}
               </Button>
             </form>
           </Form>
@@ -216,20 +243,29 @@ export default function CheckWaitTimePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="flex items-center space-x-4 rounded-lg border bg-secondary p-4">
-                <Clock className="h-8 w-8 text-primary" />
+                <Hourglass className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Predicted Waiting Time
+                    Predicted Wait
                   </p>
                   <p className="text-2xl font-bold">
-                    {prediction.estimatedWaitTimeMinutes} mins
+                    {Math.floor(prediction.estimatedWaitTimeMinutes / 60)}h {prediction.estimatedWaitTimeMinutes % 60}m
                   </p>
                 </div>
               </div>
               <div className="flex items-center space-x-4 rounded-lg border bg-secondary p-4">
                 <Users className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Queue Length</p>
+                  <p className="text-2xl font-bold">
+                    {getDepartmentQueue(selectedDepartment.id)}
+                  </p>
+                </div>
+              </div>
+               <div className="flex items-center space-x-4 rounded-lg border bg-secondary p-4">
+                <Clock className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Queue Status</p>
                   <p
@@ -252,24 +288,25 @@ export default function CheckWaitTimePage() {
               </div>
             </div>
 
-            {prediction.queueStatus === 'High' &&
-              prediction.suggestedVisitTime && (
-                <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-yellow-800">
+            {isSuggestionLoading && <SuggestionSkeleton />}
+
+            {suggestion && (
+                <div className="rounded-lg border border-blue-300 bg-blue-50 p-4 text-blue-800">
                   <div className="flex items-start gap-3">
-                    <Lightbulb className="h-6 w-6 flex-shrink-0 text-yellow-600" />
+                    <Lightbulb className="h-6 w-6 flex-shrink-0 text-blue-600" />
                     <div className="flex-1">
-                      <h4 className="font-bold">High crowd detected. Better time available.</h4>
-                      <p className="mt-1">{prediction.reasoning}</p>
+                      <h4 className="font-bold">✨ Smart Suggestion</h4>
+                      <p className="mt-1">{suggestion.reason}</p>
                       <div className="mt-4 flex flex-col gap-2 rounded-md bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                         <p className="font-semibold">
                           Suggested Slot: {' '}
                           <span className="text-primary">
-                            {prediction.suggestedVisitTime}
+                            {suggestion.suggestedTime}
                           </span>
                         </p>
                          <p className="text-sm text-muted-foreground">
-                          Expected wait: {prediction.estimatedWaitTimeMinutes} mins
+                          Expected wait: {suggestion.expectedWaitTime} mins
                         </p>
                         </div>
                         <Button
@@ -278,12 +315,12 @@ export default function CheckWaitTimePage() {
                             handleBooking(
                               selectedDepartment.id,
                               selectedDepartment.name,
-                              prediction.suggestedVisitTime || 'Suggested Time'
+                              suggestion.suggestedTime
                             )
                           }
                         >
                           <CheckCircle className="mr-2 h-4 w-4"/>
-                          Book Suggested Slot
+                          Confirm Visit Time
                         </Button>
                       </div>
                     </div>
@@ -323,37 +360,43 @@ function PredictionSkeleton() {
   return (
     <Card className="mt-8">
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-7 w-48" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div>
+             <Skeleton className="h-7 w-48" />
+             <Skeleton className="mt-2 h-4 w-32" />
+          </div>
         </div>
-        <Skeleton className="h-4 w-64" />
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="flex items-center space-x-4 rounded-lg border p-4">
-            <Skeleton className="h-8 w-8" />
-            <div>
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="mt-2 h-7 w-20" />
-            </div>
-          </div>
-          <div className="flex items-center space-x-4 rounded-lg border p-4">
-            <Skeleton className="h-8 w-8" />
-            <div>
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="mt-2 h-7 w-28" />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
         </div>
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div>
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="mt-2 h-4 w-64" />
-          </div>
-          <Skeleton className="h-10 w-28" />
-        </div>
+        <Skeleton className="h-20" />
       </CardContent>
     </Card>
   );
+}
+
+function SuggestionSkeleton() {
+    return (
+        <div className="rounded-lg border border-blue-300 bg-blue-50 p-4">
+             <div className="flex items-start gap-3">
+                <Skeleton className="h-6 w-6 rounded-full" />
+                <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-full" />
+                    <div className="mt-4 flex items-center justify-between rounded-md bg-white p-4">
+                        <div className='space-y-2'>
+                            <Skeleton className="h-5 w-40" />
+                            <Skeleton className="h-4 w-32" />
+                        </div>
+                        <Skeleton className="h-9 w-36" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
 }

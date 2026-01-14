@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -24,13 +25,13 @@ export type SuggestOptimalVisitTimeInput = z.infer<
 >;
 
 const SuggestOptimalVisitTimeOutputSchema = z.object({
-  suggestedTime: z.string().describe('The suggested visit time.'),
+  suggestedTime: z.string().describe('The suggested visit time in a human-readable format (e.g., 5:30 PM).'),
   expectedWaitTime: z
     .number()
     .describe('The expected waiting time in minutes for the suggested time.'),
   reason: z
     .string()
-    .describe('The reason for suggesting the particular visit time.'),
+    .describe('The reason for suggesting the particular visit time, explaining why the wait is lower.'),
 });
 export type SuggestOptimalVisitTimeOutput = z.infer<
   typeof SuggestOptimalVisitTimeOutputSchema
@@ -46,16 +47,25 @@ const prompt = ai.definePrompt({
   name: 'suggestOptimalVisitTimePrompt',
   input: {schema: SuggestOptimalVisitTimeInputSchema},
   output: {schema: SuggestOptimalVisitTimeOutputSchema},
-  prompt: `You are an expert in hospital patient flow. Given the current wait time, hospital, department and current time, you suggest an optimal visit time with a lower expected waiting time.
+  prompt: `You are an expert in hospital patient flow. Given the current wait time for a department, you suggest an optimal, specific visit time with a lower expected waiting time.
 
 Hospital: {{hospital}}
 Department: {{department}}
 Current Wait Time: {{currentWaitTime}} minutes
 Current Time: {{currentTime}}
 
-Suggest a visit time that would result in a lower wait time, and explain why this time is optimal. Format the suggested time to be human readable.
+If the current wait time is high (over 60 minutes), suggest a single, specific time slot later today that would result in a significantly lower wait time (e.g., 30-45 minutes). Explain a plausible reason, like "visiting after the afternoon shift change usually means shorter waits." Format the suggested time as "h:mm AM/PM".
 
-Respond in JSON format with "suggestedTime",  "expectedWaitTime", and "reason" keys.`,
+If the current wait time is already low or medium, you can still suggest a slightly better time, but it's less critical.
+
+Respond in JSON format with "suggestedTime", "expectedWaitTime", and "reason" keys.
+Example for high wait time:
+{
+  "suggestedTime": "5:30 PM",
+  "expectedWaitTime": 35,
+  "reason": "If you visit at 5:30 PM, your wait is likely to be around 35 minutes as it's after the peak afternoon rush."
+}
+`,
 });
 
 const suggestOptimalVisitTimeFlow = ai.defineFlow(
